@@ -12,12 +12,24 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+const connectDB = async () => {
+  if (mongoose.connections[0].readyState) {
+    return;
+  }
+
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("MongoDB Connected");
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+await connectDB();
+
 app.use("/api/ai", aiRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/auth", authRoutes);
-
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.log(err));
 
 export default app;
