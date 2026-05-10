@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import API from '../api/axios'
+import API from '../api/axios.js'
 
 function Message({ msg }) {
   const isUser = msg.role === 'user'

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import API from '../api/axios'
+import API from '../api/axios.js'
 
 export default function Register() {
   const navigate = useNavigate()

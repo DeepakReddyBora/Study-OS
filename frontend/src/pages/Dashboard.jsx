@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Link } from 'react-router-dom'
-import API from '../api/axios'
+import API from '../api/axios.js'
 
 function StatCard({ icon, label, value, delta, color }) {
   return (

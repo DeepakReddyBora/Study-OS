@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import API from '../api/axios'
+import API from '../api/axios.js'
 
 function TaskItem({ task, planId, day, taskIndex, onUpdate }) {
   const [loading, setLoading] = useState(false)

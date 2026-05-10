@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import API from '../api/axios'
+import API from '../api/axios.js'
 
 function Section({ title, description, children }) {
   return (
