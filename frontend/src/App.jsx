@@ -9,6 +9,7 @@ import Analytics from './pages/Analytics'
 import Assistant from './pages/Assistant'
 import MissedTasks from './pages/MissedTasks'
 import Profile from './pages/Profile' 
+import VerifyOTP from './pages/VerifyOTP'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify-otp" element={<VerifyOTP />} />
           <Route path="/" element={<ProtectedRoute />}>
             <Route index element={<Dashboard />} />
             <Route path="plan" element={<StudyPlan />} />
