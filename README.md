@@ -1,4 +1,4 @@
-# AI Study Planner
+# STUDY OS
 
 An AI-powered study planning web application built using the MERN stack. The platform helps students create personalized study plans, manage learning schedules, and interact with an AI assistant for productivity and academic guidance.
 
