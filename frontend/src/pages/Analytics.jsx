@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import API from '../api/axios.js'
 
 function StatCard({ label, value, icon, color }) {
 
@@ -273,33 +274,55 @@ export default function Analytics() {
   const [loading, setLoading] =
     useState(true)
 
-  // TEMPORARY MOCK DATA
   useEffect(() => {
 
-    setAnalytics({
-      totalTasks: 12,
-      completedTasks: 5,
-      totalHours: 24,
+    const fetchAnalytics = async () => {
 
-      subjectStats: {
-        Mathematics: 8,
-        Physics: 6,
-        Chemistry: 5,
-        Biology: 3,
-        English: 2,
-      },
-    })
+      try {
 
-    setProgress({
-      completedTasks: 5,
-      totalTasks: 12,
-    })
+        const storedUser = JSON.parse(
+          localStorage.getItem('user')
+        )
 
-    setStreak({
-      streak: 4,
-    })
+        if (!storedUser?.id) return
 
-    setLoading(false)
+        const [a, p, s] = await Promise.all([
+
+          API.get(
+            `/ai/analytics/${storedUser.id}`
+          ),
+
+          API.get(
+            `/ai/progress/${storedUser.id}`
+          ),
+
+          API.get(
+            `/ai/streak/${storedUser.id}`
+          ),
+
+        ])
+
+        setAnalytics(a.data)
+
+        setProgress(p.data)
+
+        setStreak(s.data)
+
+      } catch (error) {
+
+        console.log(
+          "Analytics Fetch Error:",
+          error
+        )
+
+      } finally {
+
+        setLoading(false)
+
+      }
+    }
+
+    fetchAnalytics()
 
   }, [])
 
@@ -331,29 +354,19 @@ export default function Analytics() {
 
         </div>
 
-        <div className="
-          grid
-          grid-cols-1
-          xl:grid-cols-2
-          gap-4
-        ">
+      </div>
+    )
+  }
 
-          {[...Array(2)].map((_, i) => (
-            <div
-              key={i}
-              className="
-                bg-zinc-900
-                border
-                border-zinc-800
-                rounded-2xl
-                h-64
-                animate-pulse
-              "
-            />
-          ))}
+  if (!analytics) {
 
-        </div>
-
+    return (
+      <div className="
+        text-center
+        text-zinc-400
+        mt-20
+      ">
+        No analytics data available
       </div>
     )
   }
@@ -415,78 +428,33 @@ export default function Analytics() {
           label="Total Tasks"
           value={analytics.totalTasks}
           color="bg-violet-500/10 text-violet-400"
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              viewBox="0 0 24 24"
-            >
-              <path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-            </svg>
-          }
+          icon={<span>📚</span>}
         />
 
         <StatCard
           label="Completed"
           value={analytics.completedTasks}
           color="bg-emerald-500/10 text-emerald-400"
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              viewBox="0 0 24 24"
-            >
-              <path d="M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3"/>
-            </svg>
-          }
+          icon={<span>✅</span>}
         />
 
         <StatCard
           label="Total Hours"
           value={`${analytics.totalHours}h`}
           color="bg-teal-500/10 text-teal-400"
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-              />
-              <path d="M12 6v6l4 2"/>
-            </svg>
-          }
+          icon={<span>⏰</span>}
         />
 
         <StatCard
           label="Day Streak"
           value={`${streak?.streak ?? 0} 🔥`}
           color="bg-amber-500/10 text-amber-400"
-          icon={
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              viewBox="0 0 24 24"
-            >
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-            </svg>
-          }
+          icon={<span>⚡</span>}
         />
 
       </div>
 
-      {/* RING + SUBJECTS */}
+      {/* MAIN SECTION */}
       <div className="
         grid
         grid-cols-1
@@ -495,7 +463,7 @@ export default function Analytics() {
         mb-6
       ">
 
-        {/* RING */}
+        {/* PROGRESS RING */}
         <div className="
           bg-zinc-900
           border
@@ -577,7 +545,7 @@ export default function Analytics() {
 
       </div>
 
-      {/* PROGRESS */}
+      {/* PROGRESS BAR */}
       <div className="
         bg-zinc-900
         border

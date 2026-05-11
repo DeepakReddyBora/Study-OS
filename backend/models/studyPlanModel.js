@@ -12,7 +12,14 @@ const taskSchema = new mongoose.Schema({
 
 const daySchema = new mongoose.Schema({
   day: Number,
-  tasks: [taskSchema]
+  tasks: [
+  {
+    subject: String,
+    hours: Number,
+    completed: Boolean,
+    date: Date,
+  }
+  ],
 });
 
 const studyPlanSchema = new mongoose.Schema(

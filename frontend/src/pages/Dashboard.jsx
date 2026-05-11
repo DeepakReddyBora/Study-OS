@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Link } from 'react-router-dom'
+import API from '../api/axios.js'
 
 function StatCard({ icon, label, value, delta, color }) {
 
@@ -84,39 +85,80 @@ export default function Dashboard() {
 
   const { user } = useAuth()
 
-  const [progress, setProgress] = useState(null)
+  const [progress, setProgress] =
+    useState(null)
 
-  const [streak, setStreak] = useState(null)
+  const [streak, setStreak] =
+    useState(null)
 
-  const [analytics, setAnalytics] = useState(null)
+  const [analytics, setAnalytics] =
+    useState(null)
 
-  const [missed, setMissed] = useState(null)
+  const [missed, setMissed] =
+    useState(null)
 
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] =
+    useState(true)
 
-  // TEMPORARY MOCK DATA
+  // REAL BACKEND DATA
   useEffect(() => {
 
-    setProgress({
-      progress: 0,
-      completedTasks: 0,
-      totalTasks: 0,
-    })
+    const fetchDashboardData =
+      async () => {
 
-    setStreak({
-      streak: 0,
-    })
+      try {
 
-    setAnalytics({
-      totalHours: 0,
-      subjectStats: {},
-    })
+        const storedUser =
+          JSON.parse(
+            localStorage.getItem('user')
+          )
 
-    setMissed({
-      missedTasks: [],
-    })
+        if (!storedUser?.id) return
 
-    setLoading(false)
+        const [p, s, a, m] =
+          await Promise.all([
+
+            API.get(
+              `/ai/progress/${storedUser.id}`
+            ),
+
+            API.get(
+              `/ai/streak/${storedUser.id}`
+            ),
+
+            API.get(
+              `/ai/analytics/${storedUser.id}`
+            ),
+
+            API.get(
+              `/ai/missed/${storedUser.id}`
+            ),
+
+          ])
+
+        setProgress(p.data)
+
+        setStreak(s.data)
+
+        setAnalytics(a.data)
+
+        setMissed(m.data)
+
+      } catch (error) {
+
+        console.log(
+          "Dashboard Fetch Error:",
+          error
+        )
+
+      } finally {
+
+        setLoading(false)
+
+      }
+    }
+
+    fetchDashboardData()
 
   }, [])
 
@@ -141,7 +183,10 @@ export default function Dashboard() {
           text-white
           tracking-tight
         ">
-          Good day, {user?.name?.split(' ')[0]} 👋
+          Good day,
+          {" "}
+          {user?.name?.split(' ')[0]}
+          {" "}👋
         </h1>
 
         <p className="
@@ -196,7 +241,10 @@ export default function Dashboard() {
               label="Overall Progress"
               value={`${progress?.progress ?? 0}%`}
               delta="Keep going!"
-              color="bg-violet-500/10 text-violet-400"
+              color="
+                bg-violet-500/10
+                text-violet-400
+              "
               icon={
                 <svg
                   className="w-5 h-5"
@@ -205,7 +253,12 @@ export default function Dashboard() {
                   strokeWidth="1.75"
                   viewBox="0 0 24 24"
                 >
-                  <path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                  <path d="
+                    M9 11l3 3L22 4
+                    M21 12v7a2 2 0 01-2 2
+                    H5a2 2 0 01-2-2
+                    V5a2 2 0 012-2h11
+                  "/>
                 </svg>
               }
             />
@@ -213,7 +266,10 @@ export default function Dashboard() {
             <StatCard
               label="Day Streak"
               value={`${streak?.streak ?? 0} 🔥`}
-              color="bg-amber-500/10 text-amber-400"
+              color="
+                bg-amber-500/10
+                text-amber-400
+              "
               icon={
                 <svg
                   className="w-5 h-5"
@@ -222,7 +278,11 @@ export default function Dashboard() {
                   strokeWidth="1.75"
                   viewBox="0 0 24 24"
                 >
-                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                  <path d="
+                    M13 2L3 14h9
+                    l-1 8 10-12h-9
+                    l1-8z
+                  "/>
                 </svg>
               }
             />
@@ -230,7 +290,10 @@ export default function Dashboard() {
             <StatCard
               label="Total Hours"
               value={`${analytics?.totalHours ?? 0}h`}
-              color="bg-teal-500/10 text-teal-400"
+              color="
+                bg-teal-500/10
+                text-teal-400
+              "
               icon={
                 <svg
                   className="w-5 h-5"
@@ -239,7 +302,11 @@ export default function Dashboard() {
                   strokeWidth="1.75"
                   viewBox="0 0 24 24"
                 >
-                  <circle cx="12" cy="12" r="10"/>
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                  />
                   <path d="M12 6v6l4 2"/>
                 </svg>
               }
@@ -247,8 +314,13 @@ export default function Dashboard() {
 
             <StatCard
               label="Missed Tasks"
-              value={missed?.missedTasks?.length ?? 0}
-              color="bg-red-500/10 text-red-400"
+              value={
+                missed?.missedTasks?.length ?? 0
+              }
+              color="
+                bg-red-500/10
+                text-red-400
+              "
               icon={
                 <svg
                   className="w-5 h-5"
@@ -257,8 +329,15 @@ export default function Dashboard() {
                   strokeWidth="1.75"
                   viewBox="0 0 24 24"
                 >
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M15 9l-6 6M9 9l6 6"/>
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                  />
+                  <path d="
+                    M15 9l-6 6
+                    M9 9l6 6
+                  "/>
                 </svg>
               }
             />
@@ -323,7 +402,9 @@ export default function Dashboard() {
                   duration-700
                 "
                 style={{
-                  width: `${progress?.progress ?? 0}%`
+                  width: `${
+                    progress?.progress ?? 0
+                  }%`
                 }}
               />
 
@@ -418,9 +499,12 @@ export default function Dashboard() {
                             rounded-full
                             transition-all
                             duration-700
-                            ${subjectColors[
-                              i % subjectColors.length
-                            ]}
+                            ${
+                              subjectColors[
+                                i %
+                                subjectColors.length
+                              ]
+                            }
                           `}
                           style={{
                             width: `${pct}%`
