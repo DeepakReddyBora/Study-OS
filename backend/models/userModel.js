@@ -24,6 +24,12 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  resetOTP: {
+    type: String,
+  },
+  resetOTPExpires: {
+    type: Date,
+  },
 },{timestamps:true});
 
 export default mongoose.model("User",userSchema);
