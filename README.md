@@ -184,14 +184,25 @@ POST /api/ai
 
 # Screenshots
 
-Add screenshots of:
+## Home Page
 
-* Home Page
-* Login Page
-* Signup Page
-* Dashboard
-* AI Assistant
-* Study Planner
+![Home](./screenshots/Homepage.png)
+
+## Login Page
+
+![Home](./screenshots/Loginpage.png)
+
+## SignUp Page
+
+![Home](./screenshots/Signuppage.png)
+
+## Study Plan
+
+![Home](./screenshots/Studyplan.png)
+
+## AI Assistant
+
+![Assistant](./screenshots/Assistant.png)
 
 ---
 
