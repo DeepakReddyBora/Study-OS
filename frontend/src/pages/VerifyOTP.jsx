@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-import API from "../api";
+import API from "../api/axios.js";
 
 export default function VerifyOTP() {
 
