@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const API = axios.create({
-  baseURL: '/api',
+  baseURL: 'https://ai-study-planner-gsgu.vercel.app/api',
 })
 
 // Attach token to every request
