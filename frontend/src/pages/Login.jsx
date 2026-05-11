@@ -1,11 +1,9 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
 import API from '../api/axios.js'
 
 export default function Login() {
-
-  const navigate = useNavigate()
 
   const [form, setForm] = useState({
     email: '',
@@ -38,11 +36,11 @@ export default function Login() {
 
       localStorage.setItem('token', res.data.token)
 
-    localStorage.setItem('user', JSON.stringify(res.data.user))
+      localStorage.setItem('user', JSON.stringify(res.data.user))
 
-    navigate('/')
+      window.location.href = '/'
 
-  } catch (err) {
+    } catch (err) {
       setError(
         err.response?.data?.message || 'Something went wrong')
     } finally {
