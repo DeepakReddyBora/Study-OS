@@ -1,12 +1,12 @@
+import dotenv from "dotenv";
+dotenv.config();
 import aiRoutes from "./routes/aiRoutes.js";
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import profileRoutes from "./routes/profileRoutes.js"; 
-import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes.js";
 
-dotenv.config();
 
 const app = express();
 
