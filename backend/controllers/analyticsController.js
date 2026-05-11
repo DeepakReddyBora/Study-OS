@@ -1,14 +1,37 @@
 import StudyPlan from "../models/studyPlanModel.js";
 
 
-// ===== GET ANALYTICS =====
-export const getAnalytics = async (req, res) => {
+// ===== GET LATEST PLAN =====
+const getLatestPlan = async (userId) => {
+
+  const latestPlan = await StudyPlan
+    .findOne({ user: userId })
+    .sort({ createdAt: -1 });
+
+  return latestPlan;
+};
+
+
+// ===== ANALYTICS =====
+export const getAnalytics = async (
+  req,
+  res
+) => {
 
   try {
 
-    const plans = await StudyPlan.find({
-      user: req.params.userId,
-    });
+    const plan = await getLatestPlan(
+      req.params.userId
+    );
+
+    if (!plan) {
+      return res.json({
+        totalTasks: 0,
+        completedTasks: 0,
+        totalHours: 0,
+        subjectStats: {},
+      });
+    }
 
     let totalTasks = 0;
 
@@ -18,26 +41,23 @@ export const getAnalytics = async (req, res) => {
 
     let subjectStats = {};
 
-    plans.forEach((plan) => {
+    plan.tasks.forEach((task) => {
 
-      plan.tasks.forEach((task) => {
+      totalTasks++;
 
-        totalTasks++;
+      totalHours += Number(task.hours);
 
-        totalHours += Number(task.hours);
+      if (task.completed) {
+        completedTasks++;
+      }
 
-        if (task.completed) {
-          completedTasks++;
-        }
+      if (!subjectStats[task.subject]) {
+        subjectStats[task.subject] = 0;
+      }
 
-        if (!subjectStats[task.subject]) {
-          subjectStats[task.subject] = 0;
-        }
-
-        subjectStats[task.subject] += Number(
-          task.hours
-        );
-      });
+      subjectStats[task.subject] += Number(
+        task.hours
+      );
 
     });
 
@@ -58,38 +78,42 @@ export const getAnalytics = async (req, res) => {
 };
 
 
-// ===== GET PROGRESS =====
-export const getProgress = async (req, res) => {
+// ===== PROGRESS =====
+export const getProgress = async (
+  req,
+  res
+) => {
 
   try {
 
-    const plans = await StudyPlan.find({
-      user: req.params.userId,
-    });
+    const plan = await getLatestPlan(
+      req.params.userId
+    );
 
-    let totalTasks = 0;
-
-    let completedTasks = 0;
-
-    plans.forEach((plan) => {
-
-      plan.tasks.forEach((task) => {
-
-        totalTasks++;
-
-        if (task.completed) {
-          completedTasks++;
-        }
-
+    if (!plan) {
+      return res.json({
+        progress: 0,
+        completedTasks: 0,
+        totalTasks: 0,
       });
+    }
 
-    });
+    const totalTasks =
+      plan.tasks.length;
+
+    const completedTasks =
+      plan.tasks.filter(
+        (task) => task.completed
+      ).length;
 
     const progress =
       totalTasks === 0
         ? 0
         : Math.round(
-            (completedTasks / totalTasks) * 100
+            (
+              completedTasks /
+              totalTasks
+            ) * 100
           );
 
     res.json({
@@ -108,28 +132,28 @@ export const getProgress = async (req, res) => {
 };
 
 
-// ===== GET STREAK =====
-export const getStreak = async (req, res) => {
+// ===== STREAK =====
+export const getStreak = async (
+  req,
+  res
+) => {
 
   try {
 
-    const plans = await StudyPlan.find({
-      user: req.params.userId,
-    });
+    const plan = await getLatestPlan(
+      req.params.userId
+    );
 
-    let streak = 0;
-
-    plans.forEach((plan) => {
-
-      plan.tasks.forEach((task) => {
-
-        if (task.completed) {
-          streak++;
-        }
-
+    if (!plan) {
+      return res.json({
+        streak: 0,
       });
+    }
 
-    });
+    const streak =
+      plan.tasks.filter(
+        (task) => task.completed
+      ).length;
 
     res.json({
       streak,
@@ -153,30 +177,27 @@ export const getMissedTasks = async (
 
   try {
 
-    const plans = await StudyPlan.find({
-      user: req.params.userId,
-    });
+    const plan = await getLatestPlan(
+      req.params.userId
+    );
 
-    let missedTasks = [];
+    if (!plan) {
+      return res.json({
+        missedTasks: [],
+      });
+    }
 
-    plans.forEach((plan) => {
+    const today = new Date();
 
-      plan.tasks.forEach((task) => {
+    const missedTasks =
+      plan.tasks.filter((task) => {
 
-        const today = new Date();
-
-        const taskDate = new Date(task.date);
-
-        if (
+        return (
           !task.completed &&
-          taskDate < today
-        ) {
-          missedTasks.push(task);
-        }
+          new Date(task.date) < today
+        );
 
       });
-
-    });
 
     res.json({
       missedTasks,
