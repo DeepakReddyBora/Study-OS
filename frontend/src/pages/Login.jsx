@@ -33,26 +33,18 @@ export default function Login() {
 
     try {
 
-      const res = await API.post(
-        '/auth/login',
-        form
-      )
+      const res = await API.post('/auth/login', form)
+      console.log(res.data)
 
-      // LOGIN CONTEXT
       localStorage.setItem('token', res.data.token)
 
-      localStorage.setItem('user', JSON.stringify(res.data.user))
+    localStorage.setItem('user', JSON.stringify(res.data.user))
 
-      // REDIRECT
-      navigate('/')
+    navigate('/')
 
-    } catch (err) {
-
+  } catch (err) {
       setError(
-        err.response?.data?.message ||
-        'Something went wrong'
-      )
-
+        err.response?.data?.message || 'Something went wrong')
     } finally {
 
       setLoading(false)
