@@ -31,11 +31,11 @@ export default function Register() {
 
     try {
 
-      const res = await API.post('/auth/register', form)
+      await API.post('/auth/register', form)
 
       navigate('/verify-otp', {
         state: {
-          email: res.data.email,
+          email: form.email,
         },
       })
 
