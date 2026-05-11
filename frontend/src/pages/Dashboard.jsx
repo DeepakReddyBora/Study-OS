@@ -2,8 +2,15 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Link } from 'react-router-dom'
 import API from '../api/axios.js'
+import StudyPlan from './StudyPlan'
 
-function StatCard({ icon, label, value, delta, color }) {
+function StatCard({
+  icon,
+  label,
+  value,
+  delta,
+  color
+}) {
 
   return (
     <div className="
@@ -100,63 +107,63 @@ export default function Dashboard() {
   const [loading, setLoading] =
     useState(true)
 
-  // REAL BACKEND DATA
-  useEffect(() => {
+  // FETCH DASHBOARD DATA
+  const fetchDashboardData =
+    async () => {
 
-    const fetchDashboardData =
-      async () => {
+    try {
 
-      try {
-
-        const storedUser =
-          JSON.parse(
-            localStorage.getItem('user')
-          )
-
-        if (!storedUser?.id) return
-
-        const [p, s, a, m] =
-          await Promise.all([
-
-            API.get(
-              `/ai/progress/${storedUser.id}`
-            ),
-
-            API.get(
-              `/ai/streak/${storedUser.id}`
-            ),
-
-            API.get(
-              `/ai/analytics/${storedUser.id}`
-            ),
-
-            API.get(
-              `/ai/missed/${storedUser.id}`
-            ),
-
-          ])
-
-        setProgress(p.data)
-
-        setStreak(s.data)
-
-        setAnalytics(a.data)
-
-        setMissed(m.data)
-
-      } catch (error) {
-
-        console.log(
-          "Dashboard Fetch Error:",
-          error
+      const storedUser =
+        JSON.parse(
+          localStorage.getItem('user')
         )
 
-      } finally {
+      if (!storedUser?.id) return
 
-        setLoading(false)
+      const [p, s, a, m] =
+        await Promise.all([
 
-      }
+          API.get(
+            `/ai/progress/${storedUser.id}`
+          ),
+
+          API.get(
+            `/ai/streak/${storedUser.id}`
+          ),
+
+          API.get(
+            `/ai/analytics/${storedUser.id}`
+          ),
+
+          API.get(
+            `/ai/missed/${storedUser.id}`
+          ),
+
+        ])
+
+      setProgress(p.data)
+
+      setStreak(s.data)
+
+      setAnalytics(a.data)
+
+      setMissed(m.data)
+
+    } catch (error) {
+
+      console.log(
+        "Dashboard Fetch Error:",
+        error
+      )
+
+    } finally {
+
+      setLoading(false)
+
     }
+  }
+
+  useEffect(() => {
 
     fetchDashboardData()
 
@@ -419,6 +426,7 @@ export default function Dashboard() {
             border-zinc-800
             rounded-2xl
             p-6
+            mb-8
           ">
 
             <h2 className="
@@ -522,6 +530,13 @@ export default function Dashboard() {
             </div>
 
           </div>
+
+          {/* STUDY PLAN */}
+          <StudyPlan
+            fetchDashboardData={
+              fetchDashboardData
+            }
+          />
 
         </>
       )}
