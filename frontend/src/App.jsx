@@ -10,6 +10,8 @@ import Assistant from './pages/Assistant'
 import MissedTasks from './pages/MissedTasks'
 import Profile from './pages/Profile' 
 import VerifyOTP from './pages/VerifyOTP'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 
 export default function App() {
   return (

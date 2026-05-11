@@ -1,71 +1,69 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 
-import API from "../api/axios.js";
+import { useAuth } from '../context/AuthContext'
+
+import API from '../api/axios.js'
 
 export default function Login() {
 
-  const navigate = useNavigate();
+  const { login } = useAuth()
+
+  const navigate = useNavigate()
 
   const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
+    email: '',
+    password: '',
+  })
 
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleChange = (e) => {
 
     setForm({
       ...form,
       [e.target.name]: e.target.value,
-    });
+    })
 
-  };
+  }
 
   const handleSubmit = async (e) => {
 
-    e.preventDefault();
+    e.preventDefault()
 
-    setError("");
-    setLoading(true);
+    setError('')
+    setLoading(true)
 
     try {
 
       const res = await API.post(
-        "/auth/login",
+        '/auth/login',
         form
-      );
+      )
 
-      // SAVE TOKEN
-      localStorage.setItem(
-        "token",
+      // LOGIN CONTEXT
+      login(
+        res.data.user,
         res.data.token
-      );
-
-      // SAVE USER
-      localStorage.setItem(
-        "user",
-        JSON.stringify(res.data.user)
-      );
+      )
 
       // REDIRECT
-      navigate("/dashboard");
+      navigate('/')
 
     } catch (err) {
 
       setError(
         err.response?.data?.message ||
-        "Login failed"
-      );
+        'Something went wrong'
+      )
 
     } finally {
 
-      setLoading(false);
+      setLoading(false)
 
     }
-  };
+  }
 
   return (
     <div className="
@@ -251,7 +249,7 @@ export default function Login() {
               {loading ? (
                 <span className="spinner"/>
               ) : (
-                "Sign in"
+                'Sign in'
               )}
 
             </button>
@@ -286,7 +284,7 @@ export default function Login() {
             text-sm
           ">
 
-            Don&apos;t have an account?{" "}
+            Don&apos;t have an account?{' '}
 
             <Link
               to="/register"
@@ -297,7 +295,7 @@ export default function Login() {
                 transition
               "
             >
-              Create account
+              Create one
             </Link>
 
           </p>
@@ -306,5 +304,5 @@ export default function Login() {
 
       </div>
     </div>
-  );
+  )
 }
