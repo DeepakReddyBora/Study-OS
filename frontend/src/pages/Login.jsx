@@ -1,13 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
-import { useAuth } from '../context/AuthContext'
-
 import API from '../api/axios.js'
 
 export default function Login() {
-
-  const { login } = useAuth()
 
   const navigate = useNavigate()
 
@@ -43,10 +39,9 @@ export default function Login() {
       )
 
       // LOGIN CONTEXT
-      login(
-        res.data.user,
-        res.data.token
-      )
+      localStorage.setItem('token', res.data.token)
+
+      localStorage.setItem('user', JSON.stringify(res.data.user))
 
       // REDIRECT
       navigate('/')
