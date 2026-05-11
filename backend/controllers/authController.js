@@ -200,6 +200,8 @@ export const login = async (req, res) => {
   }
 };
 
+
+// ================= RESEND OTP =================
 export const resendOTP = async (req, res) => {
 
   try {
@@ -221,7 +223,9 @@ export const resendOTP = async (req, res) => {
     });
 
     user.otp = otp;
-    user.otpExpires = Date.now() + 5 * 60 * 1000;
+
+    user.otpExpires =
+      Date.now() + 5 * 60 * 1000;
 
     await user.save();
 
@@ -240,6 +244,8 @@ export const resendOTP = async (req, res) => {
   }
 };
 
+
+// ================= FORGOT PASSWORD =================
 export const forgotPassword = async (req, res) => {
 
   try {
@@ -254,6 +260,7 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
+    // GENERATE RESET OTP
     const otp = otpGenerator.generate(6, {
       upperCaseAlphabets: false,
       lowerCaseAlphabets: false,
@@ -267,6 +274,7 @@ export const forgotPassword = async (req, res) => {
 
     await user.save();
 
+    // SEND EMAIL
     await sendEmail(email, otp);
 
     res.status(200).json({
@@ -275,6 +283,8 @@ export const forgotPassword = async (req, res) => {
 
   } catch (error) {
 
+    console.log("FORGOT PASSWORD ERROR:", error);
+
     res.status(500).json({
       message: error.message,
     });
@@ -282,6 +292,8 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
+
+// ================= RESET PASSWORD =================
 export const resetPassword = async (req, res) => {
 
   try {
@@ -300,12 +312,14 @@ export const resetPassword = async (req, res) => {
       });
     }
 
+    // CHECK OTP
     if (user.resetOTP !== otp) {
       return res.status(400).json({
         message: "Invalid OTP",
       });
     }
 
+    // CHECK OTP EXPIRY
     if (
       user.resetOTPExpires < Date.now()
     ) {
@@ -314,13 +328,17 @@ export const resetPassword = async (req, res) => {
       });
     }
 
+    // HASH NEW PASSWORD
     const hashedPassword =
       await bcrypt.hash(newPassword, 10);
 
+    // UPDATE PASSWORD
     user.password = hashedPassword;
 
+    // IMPORTANT FIX
     user.isVerified = true;
 
+    // CLEAR RESET OTP
     user.resetOTP = null;
     user.resetOTPExpires = null;
 
@@ -331,6 +349,8 @@ export const resetPassword = async (req, res) => {
     });
 
   } catch (error) {
+
+    console.log("RESET PASSWORD ERROR:", error);
 
     res.status(500).json({
       message: error.message,
