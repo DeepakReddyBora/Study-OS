@@ -6,8 +6,8 @@
       "destination": "/backend/server.js"
     },
     {
-      "source": "/((?!api/|assets/|.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|json)$).*)",
-      "destination": "/frontend/index.html"
+      "source": "/(.*)",
+      "destination": "/frontend/dist/index.html"
     }
   ]
 }
