@@ -319,6 +319,8 @@ export const resetPassword = async (req, res) => {
 
     user.password = hashedPassword;
 
+    user.isVerified = true;
+
     user.resetOTP = null;
     user.resetOTPExpires = null;
 
