@@ -6,14 +6,32 @@ import API from "../api/axios.js";
 export default function VerifyOTP() {
 
   const [otp, setOtp] = useState("");
+  const [timeLeft, setTimeLeft] = useState(300);
+
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const navigate = useNavigate();
 
   const location = useLocation();
 
   const email = location.state?.email;
+
+  // TIMER
+  useEffect(() => {
+
+    if (timeLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+
+  }, [timeLeft]);
 
   // REDIRECT IF EMAIL NOT FOUND
   useEffect(() => {
@@ -24,12 +42,15 @@ export default function VerifyOTP() {
 
   }, [email, navigate]);
 
+  // VERIFY OTP
   const handleVerify = async (e) => {
 
     e.preventDefault();
 
     setLoading(true);
+
     setError("");
+    setSuccess("");
 
     try {
 
@@ -39,7 +60,10 @@ export default function VerifyOTP() {
       });
 
       // SAVE TOKEN
-      localStorage.setItem("token", res.data.token);
+      localStorage.setItem(
+        "token",
+        res.data.token
+      );
 
       // SAVE USER
       localStorage.setItem(
@@ -47,10 +71,12 @@ export default function VerifyOTP() {
         JSON.stringify(res.data.user)
       );
 
-      alert(res.data.message);
+      setSuccess(res.data.message);
 
-      // REDIRECT TO DASHBOARD
-      navigate("/dashboard");
+      // REDIRECT
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1000);
 
     } catch (error) {
 
@@ -62,6 +88,40 @@ export default function VerifyOTP() {
     } finally {
 
       setLoading(false);
+
+    }
+  };
+
+  // RESEND OTP
+  const handleResendOTP = async () => {
+
+    try {
+
+      setResendLoading(true);
+
+      setError("");
+      setSuccess("");
+
+      const res = await API.post(
+        "/auth/resend-otp",
+        { email }
+      );
+
+      setSuccess(res.data.message);
+
+      // RESET TIMER
+      setTimeLeft(300);
+
+    } catch (error) {
+
+      setError(
+        error.response?.data?.message ||
+        "Failed to resend OTP"
+      );
+
+    } finally {
+
+      setResendLoading(false);
 
     }
   };
@@ -147,9 +207,33 @@ export default function VerifyOTP() {
           <p className="
             text-zinc-400
             text-center
-            mb-8
+            mb-6
           ">
             Enter the OTP sent to your email.
+          </p>
+
+          {/* TIMER */}
+          <p className="
+            text-center
+            text-sm
+            text-zinc-400
+            mb-6
+          ">
+
+            OTP expires in{" "}
+
+            <span className="
+              text-violet-400
+              font-semibold
+            ">
+
+              {Math.floor(timeLeft / 60)}:
+              {(timeLeft % 60)
+                .toString()
+                .padStart(2, "0")}
+
+            </span>
+
           </p>
 
           {/* ERROR */}
@@ -165,6 +249,22 @@ export default function VerifyOTP() {
               mb-5
             ">
               {error}
+            </div>
+          )}
+
+          {/* SUCCESS */}
+          {success && (
+            <div className="
+              bg-green-500/10
+              border
+              border-green-500/20
+              text-green-400
+              text-sm
+              p-3
+              rounded-xl
+              mb-5
+            ">
+              {success}
             </div>
           )}
 
@@ -210,11 +310,36 @@ export default function VerifyOTP() {
               "
             >
 
-              {loading ? "Verifying..." : "Verify OTP"}
+              {loading
+                ? "Verifying..."
+                : "Verify OTP"}
 
             </button>
 
           </form>
+
+          {/* RESEND OTP */}
+          <div className="mt-5 text-center">
+
+            <button
+              onClick={handleResendOTP}
+              disabled={timeLeft > 0 || resendLoading}
+              className="
+                text-sm
+                text-violet-400
+                hover:text-violet-300
+                disabled:text-zinc-600
+                transition
+              "
+            >
+
+              {resendLoading
+                ? "Sending..."
+                : "Resend OTP"}
+
+            </button>
+
+          </div>
 
         </div>
 
