@@ -77,8 +77,8 @@ root/
 ## Clone Repository
 
 ```bash
-git clone <your-repository-url>
-cd <project-folder>
+git clone https://github.com/DeepakReddyBora/Study-OS.git
+cd Study-OS
 ```
 
 ---
