@@ -261,168 +261,130 @@ export const getMissedTasks = async (req, res) => {
 
 export const rescheduleMissedTasks = async (req, res) => {
   try {
-
     const { userId } = req.params;
-
     const studyPlan = await StudyPlan.findOne({ userId });
 
     if (!studyPlan) {
-      return res.status(404).json({
-        message: "Study plan not found"
-      });
+      return res.status(404).json({ message: "Study plan not found" });
     }
 
     const missedTasks = [];
-
-    // collect missed tasks
     studyPlan.plan.forEach(day => {
       day.tasks.forEach(task => {
         if (!task.completed) {
-          missedTasks.push({
-            subject: task.subject,
-            hours: task.hours
-          });
+          missedTasks.push({ subject: task.subject, hours: task.hours });
         }
       });
     });
 
     if (missedTasks.length === 0) {
-      return res.json({
-        message: "No missed tasks to reschedule"
-      });
+      return res.json({ message: "No missed tasks to reschedule" });
     }
 
     const prompt = `
-Redistribute the following missed study tasks into future days.
+You are an API that returns ONLY JSON. 
+Redistribute these specific missed tasks into future days. 
+Do NOT add any new subjects.
 
-Tasks:
+Tasks to redistribute:
 ${JSON.stringify(missedTasks)}
 
 Return ONLY JSON in this format:
-
 [
- {"day":5,"subject":"DBMS","hours":2},
- {"day":6,"subject":"CN","hours":1}
+  {"day": 5, "subject": "Subject from the provided list", "hours": 2}
 ]
 `;
 
     const completion = await openai.chat.completions.create({
       model: "meta-llama/llama-3-8b-instruct",
       messages: [
+        { role: "system", content: "You are a rescheduling assistant. Use ONLY the subjects provided in the task list." },
         { role: "user", content: prompt }
-      ]
+      ],
+      temperature: 0.1
     });
 
     const result = completion.choices[0].message.content;
-
-    // SAFE JSON extraction
     const start = result.indexOf("[");
     const end = result.lastIndexOf("]") + 1;
 
     if (start === -1 || end === -1) {
-      return res.status(400).json({
-        message: "AI response does not contain valid JSON"
-      });
+      return res.status(400).json({ message: "AI response does not contain valid JSON" });
     }
 
-    const jsonString = result.substring(start, end);
+    const rescheduled = JSON.parse(result.substring(start, end));
 
-    const rescheduled = JSON.parse(jsonString);
-
-    // update study plan
     rescheduled.forEach(task => {
-
       const dayIndex = task.day - 1;
-
       if (studyPlan.plan[dayIndex]) {
-
         studyPlan.plan[dayIndex].tasks.push({
           subject: task.subject,
           hours: task.hours,
           completed: false
         });
-
       }
-
     });
 
     await studyPlan.save();
-
-    res.json({
-      message: "Tasks rescheduled successfully",
-      rescheduled
-    });
+    res.json({ message: "Tasks rescheduled successfully", rescheduled });
 
   } catch (error) {
-    res.status(500).json({
-      message: error.message
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
 export const adaptiveStudyPlanner = async (req, res) => {
   try {
-
     const { userId } = req.params;
-
     const studyPlan = await StudyPlan.findOne({ userId });
 
     if (!studyPlan) {
-      return res.status(404).json({
-        message: "Study plan not found"
-      });
+      return res.status(404).json({ message: "Study plan not found" });
     }
 
     const missedTasks = [];
-
     studyPlan.plan.forEach(day => {
       day.tasks.forEach(task => {
         if (!task.completed) {
-          missedTasks.push({
-            subject: task.subject,
-            hours: task.hours
-          });
+          missedTasks.push({ subject: task.subject, hours: task.hours });
         }
       });
     });
 
     if (missedTasks.length === 0) {
-      return res.json({
-        message: "No missed tasks detected"
-      });
+      return res.json({ message: "No missed tasks detected" });
     }
 
     const prompt = `
-Redistribute the following study tasks intelligently across the remaining study days.
+Intelligently redistribute these tasks across the remaining days. 
+STRICT RULE: Use ONLY the subjects listed in the input.
 
 Tasks:
 ${JSON.stringify(missedTasks)}
 
-Return JSON format:
-
+Return ONLY JSON format:
 [
- {"day":5,"subject":"DBMS","hours":2}
+  {"day": 5, "subject": "Subject from list", "hours": 2}
 ]
 `;
 
     const completion = await openai.chat.completions.create({
       model: "meta-llama/llama-3-8b-instruct",
-      messages: [{ role: "user", content: prompt }]
+      messages: [
+        { role: "system", content: "You are an adaptive planner. Never suggest subjects that are not in the provided list." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.1
     });
 
     const result = completion.choices[0].message.content;
-
     const start = result.indexOf("[");
     const end = result.lastIndexOf("]") + 1;
 
-    const jsonString = result.substring(start, end);
-
-    const newTasks = JSON.parse(jsonString);
+    const newTasks = JSON.parse(result.substring(start, end));
 
     newTasks.forEach(task => {
-
       const dayIndex = task.day - 1;
-
       if (studyPlan.plan[dayIndex]) {
         studyPlan.plan[dayIndex].tasks.push({
           subject: task.subject,
@@ -430,15 +392,10 @@ Return JSON format:
           completed: false
         });
       }
-
     });
 
     await studyPlan.save();
-
-    res.json({
-      message: "Adaptive rescheduling complete",
-      newTasks
-    });
+    res.json({ message: "Adaptive rescheduling complete", newTasks });
 
   } catch (error) {
     res.status(500).json({ message: error.message });
