@@ -4,51 +4,54 @@ import StudyPlan from "../models/studyPlanModel.js";
 // Generate Study Plan
 export const generateStudyPlan = async (req, res) => {
   try {
-
     const { userId, subjects, hoursPerDay, days } = req.body;
 
+    // 1. Ensure subjects are formatted as a clear list
+    const subjectList = Array.isArray(subjects) ? subjects.join(", ") : subjects;
+
     const prompt = `
-You are an API that returns only JSON.
+You are a study planning API that returns ONLY raw JSON.
 
-Create a ${days}-day study plan.
-
-Subjects: ${subjects}
-Study hours per day: ${hoursPerDay}
+STRICT RULES:
+1. Use ONLY these subjects: ${subjectList}
+2. Create a ${days}-day study plan.
+3. Allocate exactly ${hoursPerDay} hours of study per day.
+4. Do NOT include any subjects not listed above.
 
 Return ONLY JSON in this format:
-
 [
- {
-  "day": 1,
-  "tasks": [
-   {"subject": "DBMS", "hours": 2},
-   {"subject": "OS", "hours": 2}
-  ]
- }
+  {
+   "day": 1,
+   "tasks": [
+     {"subject": "Subject Name from list", "hours": 2}
+   ]
+  }
 ]
 `;
 
     const completion = await openai.chat.completions.create({
       model: "meta-llama/llama-3-8b-instruct",
       messages: [
+        { 
+          role: "system", 
+          content: "You are a precise study plan generator. You never invent new subjects. You only use the subjects provided by the user." 
+        },
         { role: "user", content: prompt }
-      ]
+      ],
+      // Adding temperature: 0 makes the model more deterministic and less likely to wander
+      temperature: 0.1 
     });
 
     const result = completion.choices[0].message.content;
 
-    // Extract JSON safely
     const jsonMatch = result.match(/\[[\s\S]*\]/);
 
     if (!jsonMatch) {
-      return res.status(400).json({
-        message: "AI did not return valid JSON"
-      });
+      return res.status(400).json({ message: "AI did not return valid JSON" });
     }
 
     const planJSON = JSON.parse(jsonMatch[0]);
 
-    // Save study plan to MongoDB
     const studyPlan = await StudyPlan.create({
       userId,
       plan: planJSON
