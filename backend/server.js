@@ -37,7 +37,6 @@ app.use(async (req, res, next) => {
 });
 
 // Routes
-app.use("/api/ai", analyticsRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/auth", authRoutes);

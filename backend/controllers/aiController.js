@@ -87,35 +87,76 @@ export const getStudyPlan = async (req, res) => {
 };
 
 export const updateTaskStatus = async (req, res) => {
+
   try {
 
-    const { planId, day, taskIndex } = req.body;
+    const {
+      planId,
+      day,
+      taskIndex
+    } = req.body;
 
-    const plan = await StudyPlan.findById(planId);
+    const plan =
+      await StudyPlan.findById(planId);
 
     if (!plan) {
-      return res.status(404).json({ message: "Study plan not found" });
+
+      return res.status(404).json({
+        message: "Study plan not found"
+      });
+
     }
 
-    const task = plan.plan[day - 1].tasks[taskIndex];
+    const dayData =
+      plan.plan[day - 1];
 
-    task.completed = !task.completed;
+    if (!dayData) {
+
+      return res.status(404).json({
+        message: "Day not found"
+      });
+
+    }
+
+    const task =
+      dayData.tasks[taskIndex];
+
+    if (!task) {
+
+      return res.status(404).json({
+        message: "Task not found"
+      });
+
+    }
+
+    task.completed =
+      !task.completed;
 
     if (task.completed) {
-      task.completedAt = new Date();
+
+      task.completedAt =
+        new Date();
+
     } else {
+
       task.completedAt = null;
+
     }
 
     await plan.save();
 
     res.json({
-      message: "Task updated",
+      message:
+        "Task updated successfully",
       plan
     });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+
+    res.status(500).json({
+      message: error.message
+    });
+
   }
 };
 
@@ -165,55 +206,88 @@ export const getStudyStreak = async (req, res) => {
 
     const { userId } = req.params;
 
-    const studyPlan = await StudyPlan.findOne({ userId });
+    const studyPlan =
+      await StudyPlan.findOne({ userId });
 
     if (!studyPlan) {
+
       return res.status(404).json({
         message: "Study plan not found"
       });
+
     }
 
     const completedDates = [];
 
     studyPlan.plan.forEach(day => {
-      day.tasks.forEach(task => {
-        if (task.completed && task.completedAt) {
-          const date = new Date(task.completedAt)
-            .toISOString()
-            .split("T")[0];
 
-          completedDates.push(date);
+      day.tasks.forEach(task => {
+
+        if (
+          task.completed &&
+          task.completedAt
+        ) {
+
+          const date =
+            new Date(task.completedAt);
+
+          date.setHours(0, 0, 0, 0);
+
+          completedDates.push(
+            date.toISOString()
+          );
+
         }
+
       });
+
     });
 
-    const uniqueDates = [...new Set(completedDates)].sort().reverse();
+    const uniqueDates = [
+      ...new Set(completedDates)
+    ]
+      .map(date => new Date(date))
+      .sort((a, b) => b - a);
 
     let streak = 0;
-    let today = new Date();
 
-    for (let i = 0; i < uniqueDates.length; i++) {
+    const today = new Date();
 
-      const date = new Date(uniqueDates[i]);
+    today.setHours(0, 0, 0, 0);
+
+    for (
+      let i = 0;
+      i < uniqueDates.length;
+      i++
+    ) {
+
+      const date = uniqueDates[i];
+
       const diff = Math.floor(
-        (today - date) / (1000 * 60 * 60 * 24)
+        (today - date) /
+        (1000 * 60 * 60 * 24)
       );
 
       if (diff === streak) {
+
         streak++;
+
       } else {
+
         break;
+
       }
+
     }
 
-    res.json({
-      streak
-    });
+    res.json({ streak });
 
   } catch (error) {
+
     res.status(500).json({
       message: error.message
     });
+
   }
 };
 
