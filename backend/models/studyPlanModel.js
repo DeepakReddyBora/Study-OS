@@ -1,36 +1,56 @@
 import mongoose from "mongoose";
 
 const taskSchema = new mongoose.Schema({
+
   subject: String,
+
   hours: Number,
+
   completed: {
     type: Boolean,
     default: false
   },
-  completedAt: Date
+
+  completedAt: {
+    type: Date,
+    default: null
+  }
+
 });
 
 const daySchema = new mongoose.Schema({
+
   day: Number,
-  tasks: [
-  {
-    subject: String,
-    hours: Number,
-    completed: Boolean,
-    date: Date,
-  }
-  ],
+
+  tasks: [taskSchema]
+
 });
 
-const studyPlanSchema = new mongoose.Schema(
-{
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
-  },
-  plan: [daySchema]
-},
-{ timestamps: true }
-);
+const studyPlanSchema =
+  new mongoose.Schema(
 
-export default mongoose.model("StudyPlan", studyPlanSchema);
+    {
+
+      userId: {
+
+        type:
+          mongoose.Schema.Types.ObjectId,
+
+        ref: "User"
+
+      },
+
+      plan: [daySchema]
+
+    },
+
+    {
+      timestamps: true
+    }
+
+  );
+
+export default mongoose.model(
+  "StudyPlan",
+  studyPlanSchema
+);
