@@ -9,10 +9,7 @@ import {
   resetPassword,
 } from "../controllers/authController.js";
 
-import {
-  otpLimiter,
-  verifyOtpLimiter,
-} from "../middleware/rateLimiter.js";
+import { otpLimiter, verifyOtpLimiter, loginLimiter, registerLimiter} from "../middleware/rateLimiter.js";
 
 const router = express.Router();
 
@@ -46,6 +43,6 @@ router.post(
   resetPassword
 );
 
-router.post("/login", login);
+router.post("/login", loginLimiter, login);
 
 export default router;
