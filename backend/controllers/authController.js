@@ -1,4 +1,10 @@
 import bcrypt from "bcryptjs";
+
+const OTP_EXPIRY = 5 * 60 * 1000;
+const OTP_COOLDOWN = 60 * 1000;
+const MAX_OTP_ATTEMPTS = 5;
+const LOCK_TIME = 15 * 60 * 1000;
+
 import jwt from "jsonwebtoken";
 import otpGenerator from "otp-generator";
 
@@ -32,15 +38,18 @@ export const register = async (req, res) => {
       specialChars: false,
     });
 
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
     // CREATE USER
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
 
-      otp,
-      otpExpires: Date.now() + 5 * 60 * 1000,
-
+      otp: hashedOtp,
+      otpExpires: Date.now() + OTP_EXPIRY,
+      otpAttempts: 0,
+      lastOtpSentAt: Date.now(),
       isVerified: false,
     });
 
@@ -67,12 +76,9 @@ export const register = async (req, res) => {
 
 // ================= VERIFY OTP =================
 export const verifyOTP = async (req, res) => {
-
   try {
-
     const { email, otp } = req.body;
 
-    // FIND USER
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -81,39 +87,73 @@ export const verifyOTP = async (req, res) => {
       });
     }
 
-    // CHECK OTP
-    if (user.otp !== otp) {
-      return res.status(400).json({
-        message: "Invalid OTP",
+    // CHECK LOCK
+    if (
+      user.otpLockedUntil &&
+      user.otpLockedUntil > Date.now()
+    ) {
+      return res.status(403).json({
+        message:
+          "Too many failed attempts. Try again after 15 minutes.",
       });
     }
 
-    // CHECK OTP EXPIRY
-    if (user.otpExpires < Date.now()) {
+    // CHECK EXPIRY
+    if (
+      !user.otpExpires ||
+      user.otpExpires < Date.now()
+    ) {
       return res.status(400).json({
         message: "OTP expired",
       });
     }
 
-    // VERIFY USER
+    // COMPARE HASHED OTP
+    const isOtpValid = await bcrypt.compare(
+      otp,
+      user.otp
+    );
+
+    if (!isOtpValid) {
+      user.otpAttempts += 1;
+
+      if (
+        user.otpAttempts >= MAX_OTP_ATTEMPTS
+      ) {
+        user.otpLockedUntil =
+          Date.now() + LOCK_TIME;
+
+        user.otp = null;
+        user.otpExpires = null;
+      }
+
+      await user.save();
+
+      return res.status(400).json({
+        message: "Invalid OTP",
+      });
+    }
+
     user.isVerified = true;
 
-    // CLEAR OTP
     user.otp = null;
     user.otpExpires = null;
+    user.otpAttempts = 0;
+    user.otpLockedUntil = null;
 
     await user.save();
 
-    // GENERATE TOKEN
     const token = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      {
+        expiresIn: "7d",
+      }
     );
 
-    // RESPONSE
-    res.status(200).json({
-      message: "OTP verified successfully",
+    return res.status(200).json({
+      message:
+        "OTP verified successfully",
 
       token,
 
@@ -125,13 +165,14 @@ export const verifyOTP = async (req, res) => {
     });
 
   } catch (error) {
+    console.log(
+      "VERIFY OTP ERROR:",
+      error
+    );
 
-    console.log("VERIFY OTP ERROR:", error);
-
-    res.status(500).json({
+    return res.status(500).json({
       message: error.message,
     });
-
   }
 };
 
@@ -203,158 +244,266 @@ export const login = async (req, res) => {
 
 // ================= RESEND OTP =================
 export const resendOTP = async (req, res) => {
-
   try {
-
     const { email } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+      email,
+    });
 
+    // Prevent account enumeration
     if (!user) {
-      return res.status(404).json({
-        message: "User not found",
+      return res.status(200).json({
+        message:
+          "If the account exists, OTP has been sent.",
       });
     }
 
-    const otp = otpGenerator.generate(6, {
-      upperCaseAlphabets: false,
-      lowerCaseAlphabets: false,
-      specialChars: false,
-    });
+    // Cooldown check
+    if (
+      user.lastOtpSentAt &&
+      Date.now() -
+        user.lastOtpSentAt <
+        OTP_COOLDOWN
+    ) {
+      return res.status(429).json({
+        message:
+          "Please wait 60 seconds before requesting another OTP.",
+      });
+    }
 
-    user.otp = otp;
+    const otp =
+      otpGenerator.generate(6, {
+        upperCaseAlphabets:
+          false,
+        lowerCaseAlphabets:
+          false,
+        specialChars: false,
+      });
+
+    const hashedOtp =
+      await bcrypt.hash(
+        otp,
+        10
+      );
+
+    user.otp = hashedOtp;
 
     user.otpExpires =
-      Date.now() + 5 * 60 * 1000;
+      Date.now() +
+      OTP_EXPIRY;
+
+    user.otpAttempts = 0;
+
+    user.otpLockedUntil =
+      null;
+
+    user.lastOtpSentAt =
+      Date.now();
 
     await user.save();
 
-    await sendEmail(email, otp);
+    await sendEmail(
+      email,
+      otp
+    );
 
-    res.status(200).json({
-      message: "OTP resent successfully",
+    return res.status(200).json({
+      message:
+        "OTP resent successfully",
     });
 
   } catch (error) {
-
-    res.status(500).json({
+    return res.status(500).json({
       message: error.message,
     });
-
   }
 };
 
-
 // ================= FORGOT PASSWORD =================
-export const forgotPassword = async (req, res) => {
-
+export const forgotPassword = async (
+  req,
+  res
+) => {
   try {
-
     const { email } = req.body;
 
-    const user = await User.findOne({ email });
+    const user =
+      await User.findOne({
+        email,
+      });
 
+    // Prevent enumeration
     if (!user) {
-      return res.status(404).json({
-        message: "User not found",
+      return res.status(200).json({
+        message:
+          "If the account exists, reset OTP has been sent.",
       });
     }
 
-    // GENERATE RESET OTP
-    const otp = otpGenerator.generate(6, {
-      upperCaseAlphabets: false,
-      lowerCaseAlphabets: false,
-      specialChars: false,
-    });
+    const otp =
+      otpGenerator.generate(6, {
+        upperCaseAlphabets:
+          false,
+        lowerCaseAlphabets:
+          false,
+        specialChars: false,
+      });
 
-    user.resetOTP = otp;
+    const hashedOtp =
+      await bcrypt.hash(
+        otp,
+        10
+      );
+
+    user.resetOTP =
+      hashedOtp;
 
     user.resetOTPExpires =
-      Date.now() + 5 * 60 * 1000;
+      Date.now() +
+      OTP_EXPIRY;
+
+    user.resetOtpAttempts = 0;
+
+    user.resetOtpLockedUntil =
+      null;
 
     await user.save();
 
-    // SEND EMAIL
-    await sendEmail(email, otp);
+    await sendEmail(
+      email,
+      otp
+    );
 
-    res.status(200).json({
-      message: "Reset OTP sent to email",
+    return res.status(200).json({
+      message:
+        "Reset OTP sent to email",
     });
 
   } catch (error) {
+    console.log(
+      "FORGOT PASSWORD ERROR:",
+      error
+    );
 
-    console.log("FORGOT PASSWORD ERROR:", error);
-
-    res.status(500).json({
+    return res.status(500).json({
       message: error.message,
     });
-
   }
 };
 
 
 // ================= RESET PASSWORD =================
-export const resetPassword = async (req, res) => {
-
+export const resetPassword = async (
+  req,
+  res
+) => {
   try {
-
     const {
       email,
       otp,
       newPassword,
     } = req.body;
 
-    const user = await User.findOne({ email });
+    const user =
+      await User.findOne({
+        email,
+      });
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found",
+        message:
+          "User not found",
       });
     }
 
-    // CHECK OTP
-    if (user.resetOTP !== otp) {
-      return res.status(400).json({
-        message: "Invalid OTP",
-      });
-    }
-
-    // CHECK OTP EXPIRY
     if (
-      user.resetOTPExpires < Date.now()
+      user.resetOtpLockedUntil &&
+      user.resetOtpLockedUntil >
+        Date.now()
+    ) {
+      return res.status(403).json({
+        message:
+          "Too many attempts. Try again later.",
+      });
+    }
+
+    if (
+      !user.resetOTPExpires ||
+      user.resetOTPExpires <
+        Date.now()
     ) {
       return res.status(400).json({
-        message: "OTP expired",
+        message:
+          "OTP expired",
       });
     }
 
-    // HASH NEW PASSWORD
+    const isOtpValid =
+      await bcrypt.compare(
+        otp,
+        user.resetOTP
+      );
+
+    if (!isOtpValid) {
+      user.resetOtpAttempts += 1;
+
+      if (
+        user.resetOtpAttempts >=
+        MAX_OTP_ATTEMPTS
+      ) {
+        user.resetOtpLockedUntil =
+          Date.now() +
+          LOCK_TIME;
+
+        user.resetOTP = null;
+        user.resetOTPExpires =
+          null;
+      }
+
+      await user.save();
+
+      return res.status(400).json({
+        message:
+          "Invalid OTP",
+      });
+    }
+
     const hashedPassword =
-      await bcrypt.hash(newPassword, 10);
+      await bcrypt.hash(
+        newPassword,
+        10
+      );
 
-    // UPDATE PASSWORD
-    user.password = hashedPassword;
+    user.password =
+      hashedPassword;
 
-    // IMPORTANT FIX
-    user.isVerified = true;
+    user.isVerified =
+      true;
 
-    // CLEAR RESET OTP
     user.resetOTP = null;
-    user.resetOTPExpires = null;
+    user.resetOTPExpires =
+      null;
+
+    user.resetOtpAttempts = 0;
+    user.resetOtpLockedUntil =
+      null;
 
     await user.save();
 
-    res.status(200).json({
-      message: "Password reset successful",
+    return res.status(200).json({
+      message:
+        "Password reset successful",
     });
 
   } catch (error) {
+    console.log(
+      "RESET PASSWORD ERROR:",
+      error
+    );
 
-    console.log("RESET PASSWORD ERROR:", error);
-
-    res.status(500).json({
+    return res.status(500).json({
       message: error.message,
     });
-
   }
 };

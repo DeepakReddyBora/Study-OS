@@ -1,13 +1,51 @@
 import express from "express";
-import { register, login, verifyOTP, resendOTP, forgotPassword, resetPassword} from "../controllers/authController.js";
+
+import {
+  register,
+  login,
+  verifyOTP,
+  resendOTP,
+  forgotPassword,
+  resetPassword,
+} from "../controllers/authController.js";
+
+import {
+  otpLimiter,
+  verifyOtpLimiter,
+} from "../middleware/rateLimiter.js";
 
 const router = express.Router();
 
-router.post("/register",register);
-router.post("/login",login);
-router.post("/verify-otp",verifyOTP);
-router.post("/resend-otp", resendOTP);
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
+router.post(
+  "/register",
+  otpLimiter,
+  register
+);
+
+router.post(
+  "/verify-otp",
+  verifyOtpLimiter,
+  verifyOTP
+);
+
+router.post(
+  "/resend-otp",
+  otpLimiter,
+  resendOTP
+);
+
+router.post(
+  "/forgot-password",
+  otpLimiter,
+  forgotPassword
+);
+
+router.post(
+  "/reset-password",
+  verifyOtpLimiter,
+  resetPassword
+);
+
+router.post("/login", login);
 
 export default router;
