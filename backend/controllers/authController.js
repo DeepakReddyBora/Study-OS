@@ -4,6 +4,8 @@ const OTP_EXPIRY = 5 * 60 * 1000;
 const OTP_COOLDOWN = 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
 const LOCK_TIME = 15 * 60 * 1000;
+const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 import jwt from "jsonwebtoken";
 import otpGenerator from "otp-generator";
@@ -18,6 +20,19 @@ export const register = async (req, res) => {
   try {
 
     const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        message: "All fields are required",
+      });
+    }
+
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        message:
+          "Password must contain at least 8 characters, one uppercase letter, one lowercase letter and one number",
+      });
+    }
 
     // CHECK USER EXISTS
     const userExists = await User.findOne({ email });
@@ -79,6 +94,12 @@ export const verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
+    if (!email || !otp) {
+      return res.status(400).json({
+        message: "Email and OTP are required",
+      });
+    }
+
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -87,6 +108,12 @@ export const verifyOTP = async (req, res) => {
       });
     }
 
+    if (user.isVerified) {
+      return res.status(400).json({
+        message: "Email already verified",
+      });
+    
+    }
     // CHECK LOCK
     if (
       user.otpLockedUntil &&
@@ -130,7 +157,7 @@ export const verifyOTP = async (req, res) => {
       await user.save();
 
       return res.status(400).json({
-        message: "Invalid OTP",
+        message: "Maximum OTP attempts exceeded. Please request a new OTP.",
       });
     }
 
@@ -183,6 +210,13 @@ export const login = async (req, res) => {
   try {
 
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message:
+          "Email and password are required",
+      });
+    } 
 
     // FIND USER
     const user = await User.findOne({ email });
@@ -247,6 +281,12 @@ export const resendOTP = async (req, res) => {
   try {
     const { email } = req.body;
 
+    if (!email) {
+      return res.status(400).json({
+        message: "Email is required",
+      });
+    }
+
     const user = await User.findOne({
       email,
     });
@@ -256,6 +296,13 @@ export const resendOTP = async (req, res) => {
       return res.status(200).json({
         message:
           "If the account exists, OTP has been sent.",
+      });
+    }
+
+    if (user?.isVerified) {
+      return res.status(400).json({
+        message:
+          "Email is already verified",
       });
     }
 
@@ -327,6 +374,12 @@ export const forgotPassword = async (
 ) => {
   try {
     const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        message: "Email is required",
+      });
+    }
 
     const user =
       await User.findOne({
@@ -405,6 +458,20 @@ export const resetPassword = async (
       newPassword,
     } = req.body;
 
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({
+        message:
+          "Email, OTP and new password are required",
+      });
+    }
+
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        message:
+          "Password must contain at least 8 characters, one uppercase letter, one lowercase letter and one number",
+      });
+    }
+
     const user =
       await User.findOne({
         email,
@@ -466,6 +533,15 @@ export const resetPassword = async (
       return res.status(400).json({
         message:
           "Invalid OTP",
+      });
+    }
+
+    const samePassword = await bcrypt.compare(newPassword, user.password);
+
+    if (samePassword) {
+      return res.status(400).json({
+        message:
+          "New password must be different from current password",
       });
     }
 
